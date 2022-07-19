@@ -1,0 +1,299 @@
+import companero.*
+import humor.*
+import rick.*
+import material.*
+import materialCreado.*
+import accionesForzadas.*
+import experimento.*
+import estrategia.*
+
+
+describe "materiales" {
+	
+	const lata = new Lata(250)
+	const cable = new Cable(50,40) 
+	const fleeb = new Fleeb(45,#{lata})
+	const materiaOscura = new MateriaOscura(cable)
+	const bateria = new Bateria(#{lata,cable})
+	const circuito = new Circuito(#{lata,cable})
+	
+	const otraMateriaOscura = new MateriaOscura(fleeb)
+	const parasito = new ParasitoAlienigena( #{new IncrementoDeEnergia(100), new DecrementoDeEnergia(50)} )
+	const parasito2 = new ParasitoAlienigena(#{new ElementoOculto(cable)})
+	const parasito3 = new ParasitoAlienigena(#{descartaObjeto})
+	const parasito4 = new ParasitoAlienigena(#{entregaObjetos})
+		
+	test "morty no puede recolectar material "{
+		
+		morty.modificarEnergia(25)
+		assert.throwsExceptionWithMessage("No tengo energia suficiente para recolectar el material", {morty.recolectar(lata)})
+	}
+	
+	test "morty recolecta una lata "{
+		
+		morty.modificarEnergia(350)		
+		morty.recolectar(lata)
+		assert.that(morty.elementosDeLaMochila().contains(lata))
+		assert.equals(100+350-250, morty.energia())
+	}
+	
+	test "Morty le da sus materiales al companero" {
+		//Chequeo energia
+		morty.modificarEnergia(1000)
+		morty.recolectar(lata)
+		morty.recolectar(cable)
+		morty.recolectar(materiaOscura)
+		
+		assert.equals(100+1000-250-20-20,morty.energia())// test aparte
+		
+		morty.darObjetosA(rick)
+		
+		//Chequeo del traspaso de los items correctamente
+		
+		//Mochila vacia de morty
+		assert.that(morty.elementosDeLaMochila().isEmpty())
+		
+		//Mochila de rick con los items que tenia Morty		
+		assert.that(rick.mochila().contains(lata))
+		assert.that(rick.mochila().contains(cable))
+		assert.that(rick.mochila().contains(materiaOscura))
+
+	}
+	
+	test "que experimento puede realizar rick" {
+		
+		rick.recibir(#{cable,fleeb})
+		assert.that(rick.experimentosQuePuedeRealizar().contains(construirBateria))
+	}
+	
+	test "rick no puede realizar un experimento" {
+		
+		rick.recibir(#{lata,fleeb})
+		assert.throwsExceptionWithMessage("No puedo realizar el experimento", {rick.realizar(construirShockElectrico)})
+	}
+	
+	test "electricidad conducida de una lata, energia producida de lata" {
+		
+		assert.equals(0, lata.energiaProducida())
+		assert.equals(25,lata.electricidadConducida())
+	}
+	
+	test "radiactividad de cable, electricidad conducida de cable " {
+	
+		assert.notThat(cable.esRadiactivo())
+		assert.equals(120,cable.electricidadConducida()) // 3 * 40 (seccion del cable) = 120 amperes
+		
+	}
+	
+	test "radiactividad de fleeb, cantidad de metal que consumio fleeb " {
+		
+		fleeb.comerMaterial(materiaOscura)
+		assert.that(fleeb.esRadiactivo())
+		assert.equals(270,fleeb.gramosMetal()) // 250(metal de lata) +  20 gramos metal cable = 270 gramos totales del fleeb
+	}
+	
+	test "energia producida de materiaOscura, electricidad conducida de materiaOscura" {
+		
+		assert.notThat(materiaOscura.energiaProducida() > 0)
+		assert.equals(3*40/2,materiaOscura.electricidadConducida())
+	}
+	
+	test "bateria" {
+		
+		assert.equals(20+250,bateria.gramosMetal())
+		assert.that(bateria.esRadiactivo())
+		assert.equals((20+250)*2,bateria.energiaProducida()) 
+	}
+	
+	test "circuito" {
+		
+		assert.equals(20+250,circuito.gramosMetal())
+		assert.notThat(circuito.esRadiactivo())
+		assert.equals(((0.1*250)+(3*40))*3,circuito.electricidadConducida())
+	}
+	
+	test "requerimiento para construir una bateria " {
+		
+		rick.recibir(#{lata,fleeb})
+		assert.that(construirBateria.cumpleRequisitoParaSerCreado(rick.mochila()))
+		
+	}
+	
+	test "requerimiento para construir un circuito" {
+		
+		rick.recibir(#{lata,cable})
+		assert.that(construirCircuito.cumpleRequisitoParaSerCreado(rick.mochila()))
+		
+	}
+	
+	test "requerimiento para construir un shock electrico " {
+		
+		rick.recibir(#{lata,fleeb,cable})
+		assert.notThat(construirShockElectrico.cumpleRequisitoParaSerCreado(rick.mochila()))
+			
+	}
+	
+//-------Segunda entrega-------//	
+	
+	
+	test "capacidad de la mochila de summer,energia necesaria para recolectar material" {
+		
+		assert.equals(2,summer.capacidadMaximaDeMochila())
+		assert.equals(250*0.8,summer.energiaNecesariaParaRecolectar(lata))
+	}
+	
+	test "summer no tiene energia necesaria para dar objetos a rick" {
+		summer.modificarEnergia(-95)
+		assert.throwsExceptionWithMessage("No tengo energia suficiente para darle mis materiales a mi companero", {summer.darObjetosA(rick)})
+	}
+	
+	test "buen humor" {
+		assert.equals(3,buenHumor.capacidadMaximaDeMochila())
+	}
+	
+	test "mal humor" {
+		assert.equals(1,malHumor.capacidadMaximaDeMochila())
+	}
+	
+	test "sobreexitado" {
+		assert.equals(6,sobreexitado.capacidadMaximaDeMochila())
+	}
+	
+	test "jerry se pone de mal humor " {
+		
+		jerry.modificarEnergia(1000)
+		jerry.recolectar(cable)
+		jerry.darObjetosA(rick)
+		jerry.recolectar(lata)
+		assert.equals(malHumor,jerry.humor())
+		assert.throwsExceptionWithMessage("No tengo lugar en la mochila", {jerry.recolectar(otraMateriaOscura)})
+		
+	} 
+	
+	test "jerry sobreexitado "{
+		jerry.modificarEnergia(1000)
+		jerry.recolectar(fleeb)
+		assert.equals(sobreexitado,jerry.humor())
+		
+	}
+	
+	test "jerry se pone de buen humor "{
+		
+		jerry.cambioDeHumor(sobreexitado)
+		jerry.recolectar(parasito)
+		assert.equals(buenHumor,jerry.humor())
+		
+	}
+	
+	test "summer y morty recolectan materia oscura" {
+	
+		morty.energiaInicial(600)
+		summer.energiaInicial(600)
+		morty.recolectar(otraMateriaOscura)
+		summer.recolectar(otraMateriaOscura)
+		assert.equals(350,morty.energia())
+		assert.equals(400,summer.energia())
+		//Morty // energia inicial = 600 - 250 gramos metal de lata = 350
+		//Summer
+	
+	}
+	
+	test "morty recolecta fleeb y da objeto a rick"{
+		morty.energiaInicial(700)
+		morty.recolectar(fleeb)
+		morty.darObjetosA(rick)
+		assert.that(morty.elementosDeLaMochila().isEmpty())
+	}
+	
+	test "summer recolecta cable y da objeto a rick"{
+		summer.recolectar(cable)
+		summer.darObjetosA(rick)
+		assert.that(summer.elementosDeLaMochila().isEmpty())	
+	}
+	
+	test "jerry recolecta lata y da objetos a rick"{
+		jerry.energiaInicial(300)
+		jerry.recolectar(lata)
+		jerry.darObjetosA(rick)
+		assert.that(jerry.elementosDeLaMochila().isEmpty())
+	}
+	
+	test"recoleccion de una parasito con acciones forzadas sobre la energia" {
+		
+		
+		morty.modificarEnergia(400)
+		morty.recolectar(parasito)
+		
+		assert.equals(1000-500-10,morty.energia())		
+	}
+	
+	test "recoleccion de una parasito con acciones forzadas sobre recoger un elemento oculto" {
+		
+		morty.modificarEnergia(400)
+		morty.recolectar(parasito2)
+		assert.that(morty.elementosDeLaMochila().contains(cable))
+		assert.that(morty.elementosDeLaMochila().contains(parasito2))
+	}
+	
+	test "recoleccion de una parasito con acciones forzadas sobre descartar un objeto"{
+		
+		morty.modificarEnergia(400)
+		morty.recolectar(lata)
+		morty.recolectar(cable)
+		morty.recolectar(parasito3)
+		assert.equals(2 ,morty.elementosDeLaMochila().size())
+	}
+	
+	test "recoleccion de una parasito con acciones forzadas a entregar sus materiales a un compañero"{
+		
+		morty.modificarEnergia(400)
+		morty.recolectar(lata)
+		morty.recolectar(cable)
+		morty.recolectar(parasito4)
+		assert.that(morty.elementosDeLaMochila().isEmpty())
+		assert.equals(3,rick.mochila().size())
+	}
+	
+	
+	test "realizar experimento seleccionando materiales al azar " {
+		
+		rick.recibir(#{lata,fleeb,cable})
+		rick.realizar(construirBateria)
+		assert.equals(rick.companero().energia(),100-5)
+		assert.that(construirBateria.cumpleRequisitoParaSerCreado(rick.mochila()))
+			
+	}
+	
+	test "realizar experimento cambiando la estrategia a ecologico" {
+		
+		rick.recibir(#{lata,fleeb,cable, materiaOscura})
+		rick.cambiarEstrategia(ecologico)
+		rick.realizar(construirCircuito)
+		assert.that(construirCircuito.cumpleRequisitoParaSerCreado(rick.mochila()))
+			
+	}
+	
+	test "realizar experimento con estrategia menorCantidadMetal" {
+		
+		rick.recibir(#{lata,fleeb,cable, materiaOscura})
+		rick.cambiarEstrategia(menorCantidadDeMetal)
+		rick.realizar(construirCircuito)
+		assert.that(construirCircuito.cumpleRequisitoParaSerCreado(rick.mochila()))
+			
+	}
+	
+	test "realizar experimento seleccionando el mejor generador electrico " {
+		
+		rick.recibir(#{lata,fleeb,cable})
+		rick.cambiarEstrategia(mejorGeneradorElectrico)
+		rick.realizar(construirBateria)
+		assert.equals(rick.companero().energia(),100-5)
+		assert.that(construirBateria.cumpleRequisitoParaSerCreado(rick.mochila()))
+			
+	}
+	
+	
+}
+
+	
+	
